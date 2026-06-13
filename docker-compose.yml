@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+
+  # ── PHP + Apache Web Server 
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    env_file:
+      - .env
+    container_name: transactiwar_app_team7
+    ports:
+      - "8080:80"           # Visit http://localhost:8080
+    volumes:
+    - ./public:/var/www/public
+    - ./includes:/var/www/includes
+    - ./uploads:/var/www/uploads
+    - ./logs:/var/www/logs
+    - ./index.php:/var/www/index.php
+    - ./script.php:/var/www/script.php
+    - ./Phase2.csv:/var/www/Phase2.csv
+    user: "1000:1000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - transactiwar_net
+
+  # ── MySQL Database 
+  db:
+    image: mysql:8.0
+    container_name: transactiwar_db_team_7
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASS}
+      MYSQL_DATABASE: ${DB_NAME}           # Optional: connect with MySQL Workbench
+    volumes:
+      - db_data:/var/lib/mysql                  # Persistent DB storage
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql  # Auto-runs on first start
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - transactiwar_net
+
+  # ── phpMyAdmin (Visual DB Manager) 
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: transactiwar_pma_team7
+    ports:
+      - "8081:80"           # Visit http://localhost:8081
+    environment:
+      PMA_HOST: ${DB_HOST}
+      PMA_USER: ${DB_USER}
+      PMA_PASSWORD: ${DB_PASS}
+    depends_on:
+      - db
+    networks:
+      - transactiwar_net
+
+volumes:
+  db_data:
+
+networks:
+  transactiwar_net:
+    driver: bridge
